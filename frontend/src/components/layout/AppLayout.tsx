@@ -1,5 +1,3 @@
-// src/components/layout/AppLayout.tsx
-
 import React, { useState, useEffect } from "react";
 import "./AppLayout.scss";
 
@@ -46,8 +44,6 @@ const extractTicketAddressFromInput = (raw: string): string | null => {
   const trimmed = raw.trim();
   if (!trimmed) return null;
 
-  // Case 1: Full URL (what we encode in the QR code)
-  //   e.g. https://your-site.xyz/checkin?ticket=xxxxx
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     try {
       const url = new URL(trimmed);
@@ -61,12 +57,10 @@ const extractTicketAddressFromInput = (raw: string): string | null => {
   if (trimmed.includes("ticket=")) {
     const idx = trimmed.indexOf("ticket=");
     const after = trimmed.slice(idx + "ticket=".length);
-    // Split on common separators (&, ?, #, whitespace)
     const ticketCandidate = after.split(/[&#?\s]/)[0];
     return ticketCandidate.trim() || null;
   }
 
-  // Case 3: Assume it's a raw pubkey string
   return trimmed;
 };
 
@@ -94,10 +88,8 @@ const AppLayout: React.FC = () => {
   const [mainTab, setMainTab] = useState<MainTab>("explore");
   const [manageTab, setManageTab] = useState<ManageTab>("create");
 
-  // For event details view
   const [selectedEvent, setSelectedEvent] = useState<EventAccount | null>(null);
 
-  // NEW: deep link state (from /checkin?ticket=...)
   const [deepLinkTicket, setDeepLinkTicket] = useState<string | null>(null);
   const [deepLinkEventPubkey, setDeepLinkEventPubkey] =
     useState<PublicKey | null>(null);
@@ -111,7 +103,6 @@ const AppLayout: React.FC = () => {
 
     const baseMsg = e?.error?.message ?? e?.message ?? "Transaction failed";
 
-    // tiny hint in the banner if we have logs
     const hint = logs ? " (see console for program logs)" : "";
     setTxStatus(`❌ ${baseMsg}${hint}`);
   };
@@ -128,9 +119,6 @@ const AppLayout: React.FC = () => {
     return pda;
   };
 
-  // ----------------- deep-link parsing -----------------
-
-  // Parse ?ticket=... from the current URL once on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -139,7 +127,6 @@ const AppLayout: React.FC = () => {
       const ticketParam = url.searchParams.get("ticket");
       if (ticketParam) {
         setDeepLinkTicket(ticketParam.trim());
-        // make sure we're on the explore tab so the event panel is visible
         setMainTab("explore");
       }
     } catch (e) {
@@ -147,7 +134,6 @@ const AppLayout: React.FC = () => {
     }
   }, []);
 
-  // When we have a deep-link ticket and a program, fetch the ticket to see which event it belongs to
   useEffect(() => {
     if (!program || !deepLinkTicket) return;
 
@@ -166,8 +152,6 @@ const AppLayout: React.FC = () => {
     })();
   }, [program, deepLinkTicket]);
 
-  // Once we know which event the ticket belongs to AND events have loaded,
-  // auto-select that event so the right EventDetailsPanel opens.
   useEffect(() => {
     if (!deepLinkEventPubkey || events.length === 0) return;
 
@@ -183,7 +167,6 @@ const AppLayout: React.FC = () => {
     }
   }, [deepLinkEventPubkey, events]);
 
-  // ----------------- init_event -----------------
 
   const handleCreateEvent = async (params: {
     priceSol: string;
@@ -197,14 +180,12 @@ const AppLayout: React.FC = () => {
 
       const eventIdBn = generateEventIdBn();
 
-      // normalize "0,15" -> "0.15"
       const normalized = (params.priceSol || "0").replace(",", ".");
       const priceSolNum = parseFloat(normalized);
       if (Number.isNaN(priceSolNum) || priceSolNum < 0) {
         throw new Error("Invalid ticket price");
       }
 
-      // SOL -> lamports
       const priceLamports = Math.round(priceSolNum * LAMPORTS_PER_SOL);
       const priceLamportsBn = new BN(priceLamports.toString());
 
@@ -212,8 +193,8 @@ const AppLayout: React.FC = () => {
 
       const sig = await program.methods
         .initEvent(
-          eventIdBn, // u64 (BN)
-          priceLamportsBn, // u64 (BN) in lamports
+          eventIdBn,
+          priceLamportsBn,
           params.title,
           params.description
         )
@@ -230,8 +211,6 @@ const AppLayout: React.FC = () => {
       handleError(e);
     }
   };
-
-  // ----------------- join_event -----------------
 
   const handleJoinEvent = async (params: { eventPubkey: string }) => {
     if (!program || !wallet.publicKey) return;
@@ -252,8 +231,6 @@ const AppLayout: React.FC = () => {
       }
 
       const user = wallet.publicKey;
-
-      // 👉 use the actual PDA from the account, don't recompute
       const eventPda = eventPubkey;
 
       const mintKeypair = Keypair.generate();
@@ -277,9 +254,9 @@ const AppLayout: React.FC = () => {
 
       const initMintIx = createInitializeMintInstruction(
         mint,
-        0, // decimals
-        mintAuthPda, // mint authority PDA
-        null // freeze authority
+        0,
+        mintAuthPda,
+        null
       );
 
       const buyerAta = await getAssociatedTokenAddress(mint, user);
@@ -330,8 +307,6 @@ const AppLayout: React.FC = () => {
     }
   };
 
-  // ----------------- withdraw -----------------
-
   const handleWithdraw = async (params: {
     eventPubkey: string;
     amountSol: string;
@@ -365,8 +340,6 @@ const AppLayout: React.FC = () => {
     }
   };
 
-  // ----------------- check_in (existing flow) -----------------
-
   const handleCheckIn = async (ticket: TicketAccount, event: EventAccount) => {
     if (!program || !wallet.publicKey) return;
 
@@ -397,8 +370,6 @@ const AppLayout: React.FC = () => {
     }
   };
 
-  // ----------------- organizer check_in by pasted ticket address -----------------
-
   const handleOrganizerCheckInByAddress = async (
     ticketAddress: string,
     event: EventAccount
@@ -413,7 +384,6 @@ const AppLayout: React.FC = () => {
         return;
       }
 
-      // 1) Only the event organizer can check in
       if (!event.organizer.equals(wallet.publicKey)) {
         setTxStatus("❌ Only the event organizer can check in attendees");
         return;
@@ -454,7 +424,6 @@ const AppLayout: React.FC = () => {
 
       setTxStatus("⏳ Checking in attendee…");
 
-      // 5) Use the event account pubkey directly (matches seeds in the Anchor code)
       const eventPda = event.pubkey;
 
       const sig = await program.methods
@@ -541,7 +510,6 @@ const AppLayout: React.FC = () => {
       );
     }
 
-    // manage tab
     return (
       <div className="app-layout__manage">
         <div className="app-layout__tabs app-layout__tabs--sub">
@@ -604,7 +572,6 @@ const AppLayout: React.FC = () => {
       <StatusBanner message={txStatus} />
 
       <div className="app-layout__shell">
-        {/* Main tab bar */}
         <div className="app-layout__tabs">
           <button
             className={`app-layout__tab ${
