@@ -1,7 +1,7 @@
 # Solana Event dApp – Project Description
 
 **Deployed Frontend URL:** https://event.dfieldsolutions.com  
-**Solana Program ID:** `EASxLwbjSfJn75XGj1aHtA17jSc7xCSkuAcMnwJbSUBC`
+**Solana Program ID:** `HK43FpG11qhqwHZT8ZuKqn8FPFpbYJj59QL1qvFpm1tx`
 
 ---
 
