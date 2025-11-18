@@ -7,10 +7,7 @@
 
 ## 🎥 Project Demo
 
-<video width="100%" height="400" controls>
-    <source src="https://event.dfieldsolutions.com/video.mp4" type="video/mp4">
-    Your browser does not support the video tag. Please view the demo video: <a href="https://event.dfieldsolutions.com/video.mp4">video.mp4</a>
-</video>
+<a href="https://event.dfieldsolutions.com/video.mp4">See the demo video</a>
 
 ---
 
