@@ -61,7 +61,6 @@ pub fn _join_event(ctx: Context<JoinEvent>) -> Result<()> {
     let event = &ctx.accounts.event;
     let signer = &ctx.accounts.signer;
 
-    // 1) Pay event price if > 0
     if event.price > 0 {
         let ix = system_instruction::transfer(&signer.key(), &event.key(), event.price);
 
@@ -75,7 +74,6 @@ pub fn _join_event(ctx: Context<JoinEvent>) -> Result<()> {
         )?;
     }
 
-    // 2) Seeds for mint authority PDA
     let mint_bump = ctx.bumps.mint_authority;
     let mint_key = ctx.accounts.mint.key();
     let mint_seeds: &[&[u8]] = &[
@@ -85,7 +83,6 @@ pub fn _join_event(ctx: Context<JoinEvent>) -> Result<()> {
     ];
     let signer_seeds: &[&[&[u8]]] = &[mint_seeds];
 
-    // 3) Mint 1 token to buyer ATA via CPI
     let cpi = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info(),
         MintTo {
@@ -98,7 +95,6 @@ pub fn _join_event(ctx: Context<JoinEvent>) -> Result<()> {
 
     token::mint_to(cpi, 1)?;
 
-    // 4) Fill the Ticket account
     let ticket_bump = ctx.bumps.ticket;
     let ticket = &mut ctx.accounts.ticket;
     ticket.event = event.key();
